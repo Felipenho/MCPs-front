@@ -1,0 +1,407 @@
+"use client";
+
+import { useState, useEffect, useRef, useTransition } from "react";
+import type { Preset, OutputLine } from "@/lib/types";
+import { formatMcpOutput } from "@/ai/flows/format-mcp-output";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Server,
+  Send,
+  History,
+  Star,
+  Plus,
+  Trash2,
+  Sparkles,
+  LoaderCircle,
+  Cube,
+  Power,
+  PowerOff,
+  Terminal,
+  ChevronRight,
+  BookUser
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Separator } from "./ui/separator";
+
+const PRESETS_STORAGE_KEY = "mcp-client-presets";
+const HISTORY_STORAGE_KEY = "mcp-client-history";
+
+export function McpClient() {
+  const [isMounted, setIsMounted] = useState(false);
+  const [serverAddress, setServerAddress] = useState("mcp.example.com");
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [output, setOutput] = useState<OutputLine[]>([]);
+  const [command, setCommand] = useState("");
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [presets, setPresets] = useState<Preset[]>([]);
+  const [newPresetName, setNewPresetName] = useState("");
+  const [newPresetCommand, setNewPresetCommand] = useState("");
+  const [isPresetDialogOpen, setIsPresetDialogOpen] = useState(false);
+
+  const outputRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    setIsMounted(true);
+    try {
+      const storedPresets = localStorage.getItem(PRESETS_STORAGE_KEY);
+      if (storedPresets) {
+        setPresets(JSON.parse(storedPresets));
+      }
+      const storedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (storedHistory) {
+        setHistory(JSON.parse(storedHistory));
+      }
+    } catch (error) {
+      console.error("Failed to load data from localStorage", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao carregar dados salvos.",
+        variant: "destructive"
+      });
+    }
+
+    addOutputLine("system", "Bem-vindo ao Client Hub! Insira o endereço do servidor e conecte-se.");
+  }, [toast]);
+
+  useEffect(() => {
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight;
+    }
+  }, [output]);
+
+  useEffect(() => {
+    if(!isMounted) return;
+    try {
+        localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(presets));
+    } catch (error) {
+        console.error("Failed to save presets to localStorage", error);
+    }
+  }, [presets, isMounted]);
+
+  useEffect(() => {
+    if(!isMounted) return;
+    try {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+    } catch (error) {
+        console.error("Failed to save history to localStorage", error);
+    }
+  }, [history, isMounted]);
+
+  const addOutputLine = (type: OutputLine["type"], text: string) => {
+    setOutput((prev) => [
+      ...prev,
+      { id: prev.length, type, text, isFormatting: false, showFormatted: false },
+    ]);
+  };
+
+  const handleConnect = () => {
+    if (!serverAddress) {
+      toast({ title: "Endereço do servidor inválido", description: "Por favor, insira um endereço de servidor.", variant: "destructive" });
+      return;
+    }
+    setIsConnecting(true);
+    addOutputLine("system", `Conectando a ${serverAddress}...`);
+    setTimeout(() => {
+      setIsConnecting(false);
+      setIsConnected(true);
+      addOutputLine(
+        "system",
+        `Conectado com sucesso a ${serverAddress}. Digite 'help' para ver os comandos.`
+      );
+    }, 1500);
+  };
+
+  const handleDisconnect = () => {
+    setIsConnected(false);
+    addOutputLine("system", "Desconectado do servidor.");
+  };
+  
+  const mockServerResponse = (sentCommand: string) => {
+    const responses: { [key: string]: string } = {
+        help: "Comandos disponíveis: help, status, players, kick <player>",
+        status: `Status do Servidor: Online\nVersão: 1.20.1\nJogadores: ${Math.floor(Math.random() * 10)}/20`,
+        players: "Jogadores online: player1, player2, another_user",
+    };
+    if (sentCommand.startsWith("kick")) {
+        return `Jogador ${sentCommand.split(" ")[1]} foi kickado.`;
+    }
+    return responses[sentCommand.toLowerCase()] || `Comando desconhecido: "${sentCommand}"`;
+  }
+
+  const handleSendCommand = () => {
+    if (!command.trim() || !isConnected) return;
+
+    addOutputLine("out", command);
+    
+    if (history[0] !== command) {
+        const newHistory = [command, ...history].slice(0, 50);
+        setHistory(newHistory);
+    }
+    setHistoryIndex(-1);
+    
+    setTimeout(() => {
+        addOutputLine("in", mockServerResponse(command));
+    }, 300 + Math.random() * 300);
+
+    setCommand("");
+  };
+
+  const handleCommandKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSendCommand();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (history.length > 0) {
+        const newIndex = Math.min(historyIndex + 1, history.length - 1);
+        setHistoryIndex(newIndex);
+        setCommand(history[newIndex]);
+      }
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (historyIndex > 0) {
+        const newIndex = Math.max(historyIndex - 1, 0);
+        setHistoryIndex(newIndex);
+        setCommand(history[newIndex]);
+      } else if (historyIndex === 0) {
+        setHistoryIndex(-1);
+        setCommand("");
+      }
+    }
+  };
+
+  const handleAddPreset = () => {
+    if (!newPresetName.trim() || !newPresetCommand.trim()) {
+      toast({ title: "Preset inválido", description: "Nome e comando do preset não podem estar vazios.", variant: "destructive" });
+      return;
+    }
+    const newPreset: Preset = {
+      id: crypto.randomUUID(),
+      name: newPresetName,
+      command: newPresetCommand,
+    };
+    setPresets([...presets, newPreset]);
+    setNewPresetName("");
+    setNewPresetCommand("");
+    setIsPresetDialogOpen(false);
+    toast({ title: "Preset salvo!", description: `O preset '${newPreset.name}' foi adicionado.`});
+  };
+
+  const handleDeletePreset = (id: string) => {
+    setPresets(presets.filter((p) => p.id !== id));
+    toast({ title: "Preset removido.", variant: "default"});
+  };
+  
+  const handleFormatOutput = async (id: number) => {
+    const targetOutput = output.find(o => o.id === id);
+    if (!targetOutput) return;
+
+    setOutput(prev => prev.map(o => o.id === id ? {...o, isFormatting: true} : o));
+
+    try {
+        const result = await formatMcpOutput({ mcpOutput: targetOutput.text });
+        setOutput(prev => prev.map(o => o.id === id ? {...o, isFormatting: false, formattedText: result.formattedOutput, showFormatted: true } : o));
+    } catch (error) {
+        console.error("AI formatting failed", error);
+        toast({ title: "Falha na formatação", description: "A formatação com IA não pôde ser concluída.", variant: "destructive" });
+        setOutput(prev => prev.map(o => o.id === id ? {...o, isFormatting: false} : o));
+    }
+  }
+
+  const toggleFormattedOutput = (id: number) => {
+    setOutput(prev => prev.map(o => o.id === id ? {...o, showFormatted: !o.showFormatted} : o));
+  };
+
+
+  if (!isMounted) {
+    return null;
+  }
+
+  return (
+    <div className="flex h-screen w-screen bg-background text-foreground font-body">
+      <aside className="w-[350px] border-r border-border flex flex-col p-4">
+        <div className="flex items-center gap-3 mb-4 p-2">
+            <Cube size={32} className="text-primary"/>
+            <h1 className="text-2xl font-bold font-headline">Client Hub</h1>
+        </div>
+        <Card className="flex-grow flex flex-col">
+            <Tabs defaultValue="presets" className="flex flex-col h-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="presets"><Star className="mr-2 h-4 w-4"/>Presets</TabsTrigger>
+                <TabsTrigger value="history"><History className="mr-2 h-4 w-4"/>Histórico</TabsTrigger>
+            </TabsList>
+            <TabsContent value="presets" className="flex-grow flex flex-col h-0">
+                <div className="p-4 border-b">
+                    <Dialog open={isPresetDialogOpen} onOpenChange={setIsPresetDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button className="w-full"><Plus className="mr-2 h-4 w-4"/>Adicionar Preset</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                        <DialogTitle>Novo Preset</DialogTitle>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="name" className="text-right">Nome</Label>
+                            <Input id="name" value={newPresetName} onChange={(e) => setNewPresetName(e.target.value)} className="col-span-3"/>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="command" className="text-right">Comando</Label>
+                            <Input id="command" value={newPresetCommand} onChange={(e) => setNewPresetCommand(e.target.value)} className="col-span-3"/>
+                        </div>
+                        </div>
+                        <DialogFooter>
+                            <Button onClick={handleAddPreset}>Salvar</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                    </Dialog>
+                </div>
+                <ScrollArea className="flex-grow">
+                    <div className="p-4 space-y-2">
+                        {presets.length === 0 && <p className="text-sm text-muted-foreground text-center p-4">Nenhum preset salvo.</p>}
+                        {presets.map((preset) => (
+                            <div key={preset.id} className="flex items-center gap-2 p-2 rounded-md bg-muted/20 hover:bg-muted/50 transition-colors">
+                                <BookUser className="h-4 w-4 text-primary"/>
+                                <span className="flex-grow font-mono text-sm">{preset.name}</span>
+                                <Button size="icon" variant="ghost" onClick={() => { setCommand(preset.command); }}>
+                                    <Send className="h-4 w-4"/>
+                                </Button>
+                                <Button size="icon" variant="ghost" onClick={() => handleDeletePreset(preset.id)}>
+                                    <Trash2 className="h-4 w-4 text-destructive/80"/>
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+            </TabsContent>
+            <TabsContent value="history" className="flex-grow h-0">
+                <ScrollArea className="h-full">
+                    <div className="p-4 space-y-1">
+                        {history.length === 0 && <p className="text-sm text-muted-foreground text-center p-4">Nenhum comando no histórico.</p>}
+                        {history.map((histCmd, i) => (
+                            <button key={i} onClick={() => setCommand(histCmd)} className="w-full text-left p-2 rounded-md hover:bg-muted/50 transition-colors">
+                                <p className="font-mono text-sm truncate text-muted-foreground">{histCmd}</p>
+                            </button>
+                        ))}
+                    </div>
+                </ScrollArea>
+            </TabsContent>
+            </Tabs>
+        </Card>
+      </aside>
+
+      <main className="flex-grow flex flex-col p-4 gap-4">
+        <Card>
+            <CardContent className="p-4 flex items-center gap-4">
+                <Server className="text-primary"/>
+                <Input
+                    placeholder="Endereço do Servidor"
+                    value={serverAddress}
+                    onChange={(e) => setServerAddress(e.target.value)}
+                    disabled={isConnected || isConnecting}
+                    className="flex-grow"
+                />
+                {isConnected ? (
+                    <Button variant="destructive" onClick={handleDisconnect}><PowerOff className="mr-2 h-4 w-4"/>Desconectar</Button>
+                ) : (
+                    <Button onClick={handleConnect} disabled={isConnecting}>
+                        {isConnecting ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin"/> : <Power className="mr-2 h-4 w-4"/>}
+                        {isConnecting ? "Conectando..." : "Conectar"}
+                    </Button>
+                )}
+                <div className="flex items-center gap-2">
+                    <div className={cn("h-3 w-3 rounded-full", isConnected ? "bg-green-500" : "bg-red-500")}/>
+                    <span className="text-sm font-medium">{isConnected ? "Conectado" : "Desconectado"}</span>
+                </div>
+            </CardContent>
+        </Card>
+
+        <Card className="flex-grow flex flex-col">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Terminal/> Saída do Servidor</CardTitle>
+          </CardHeader>
+          <Separator />
+            <ScrollArea className="flex-grow p-4" viewportRef={outputRef}>
+                <div className="space-y-3 font-mono text-sm">
+                {output.map((line) => (
+                    <div key={line.id} className="flex flex-col items-start gap-1 animate-in fade-in-0 duration-300">
+                        <div className="flex items-center gap-2 w-full">
+                            <ChevronRight size={16} className={cn(
+                                "transform transition-transform",
+                                line.type === "out" && "text-accent -rotate-90",
+                                line.type === "in" && "text-green-400 rotate-90",
+                                line.type === "system" && "text-blue-400"
+                            )} />
+                            <div className="flex-grow">
+                                {line.showFormatted && line.formattedText ? (
+                                    <div className="prose prose-sm prose-invert" dangerouslySetInnerHTML={{ __html: line.formattedText.replace(/\n/g, '<br />') }} />
+                                ) : (
+                                    <pre className="whitespace-pre-wrap break-words">{line.text}</pre>
+                                )}
+                            </div>
+                            {line.type === "in" && (
+                                <>
+                                {line.formattedText && 
+                                    <Button size="sm" variant="outline" onClick={() => toggleFormattedOutput(line.id)}>
+                                        {line.showFormatted ? "Ver Original" : "Ver Formatado"}
+                                    </Button>
+                                }
+                                <Button size="icon" variant="ghost" onClick={() => handleFormatOutput(line.id)} disabled={line.isFormatting}>
+                                    {line.isFormatting ? <LoaderCircle className="h-4 w-4 animate-spin"/> : <Sparkles className="h-4 w-4 text-accent"/>}
+                                </Button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                ))}
+                </div>
+            </ScrollArea>
+        </Card>
+
+        <Card>
+            <CardContent className="p-2">
+                <div className="relative">
+                    <Input
+                        placeholder="Digite um comando..."
+                        value={command}
+                        onChange={(e) => setCommand(e.target.value)}
+                        onKeyDown={handleCommandKeyDown}
+                        disabled={!isConnected}
+                        className="pr-12"
+                    />
+                    <Button 
+                        size="icon" 
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" 
+                        onClick={handleSendCommand} 
+                        disabled={!isConnected || !command.trim()}
+                    >
+                        <Send className="h-4 w-4" />
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+      </main>
+    </div>
+  );
+}
