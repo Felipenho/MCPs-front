@@ -29,7 +29,6 @@ import {
   Star,
   Plus,
   Trash2,
-  Sparkles,
   LoaderCircle,
   Box,
   Power,
@@ -46,7 +45,7 @@ const HISTORY_STORAGE_KEY = "mcp-client-history";
 
 export function McpClient() {
   const [isMounted, setIsMounted] = useState(false);
-  const [serverAddress, setServerAddress] = useState("mcp.example.com");
+  const [serverAddress, setServerAddress] = useState("127.0.0.1:8000");
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [output, setOutput] = useState<OutputLine[]>([]);
@@ -122,49 +121,65 @@ export function McpClient() {
     }
     setIsConnecting(true);
     addOutputLine("system", `Connecting to ${serverAddress}...`);
+    // In a real app, you'd likely ping the server here.
     setTimeout(() => {
       setIsConnecting(false);
       setIsConnected(true);
       addOutputLine(
         "system",
-        `Successfully connected to ${serverAddress}. Type 'help' for commands.`
+        `Connection established to ${serverAddress}. Try 'sum 2 3'`
       );
-    }, 1500);
+    }, 1000);
   };
 
   const handleDisconnect = () => {
     setIsConnected(false);
     addOutputLine("system", "Disconnected from server.");
   };
-  
-  const mockServerResponse = (sentCommand: string) => {
-    const responses: { [key: string]: string } = {
-        help: "Available commands: help, status, players, kick <player>",
-        status: `Server Status: Online\nVersion: 1.20.1\nPlayers: ${Math.floor(Math.random() * 10)}/20`,
-        players: "Online players: player1, player2, another_user",
-    };
-    if (sentCommand.startsWith("kick")) {
-        return `Player ${sentCommand.split(" ")[1]} has been kicked.`;
-    }
-    return responses[sentCommand.toLowerCase()] || `Unknown command: "${sentCommand}"`;
-  }
 
-  const handleSendCommand = () => {
+  const handleSendCommand = async () => {
     if (!command.trim() || !isConnected) return;
 
-    addOutputLine("out", command);
+    const currentCommand = command;
+    addOutputLine("out", currentCommand);
     
-    if (history[0] !== command) {
-        const newHistory = [command, ...history].slice(0, 50);
+    if (history[0] !== currentCommand) {
+        const newHistory = [currentCommand, ...history].slice(0, 50);
         setHistory(newHistory);
     }
     setHistoryIndex(-1);
-    
-    setTimeout(() => {
-        addOutputLine("in", mockServerResponse(command));
-    }, 300 + Math.random() * 300);
-
     setCommand("");
+
+    const [cmd, ...args] = currentCommand.split(' ');
+
+    if (cmd === 'sum' && args.length === 2) {
+      const [a, b] = args.map(Number);
+      if (!isNaN(a) && !isNaN(b)) {
+        try {
+          const response = await fetch(`http://${serverAddress}/sum_numbers`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ a, b }),
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const result = await response.json();
+          addOutputLine("in", `Result: ${result.result}`);
+
+        } catch (error: any) {
+          addOutputLine("system", `Error: ${error.message}`);
+        }
+      } else {
+        addOutputLine("system", "Error: 'sum' command requires two number arguments.");
+      }
+    } else {
+       addOutputLine("in", `Unknown command: "${currentCommand}"`);
+    }
   };
 
   const handleCommandKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -322,8 +337,8 @@ export function McpClient() {
             <CardTitle className="flex items-center gap-2"><Terminal/> Server Output</CardTitle>
           </CardHeader>
           <Separator />
-            <ScrollArea className="flex-grow p-4" viewportRef={outputRef}>
-                <div className="space-y-3 font-mono text-sm">
+            <ScrollArea className="flex-grow p-4">
+             <div ref={outputRef} className="space-y-3 font-mono text-sm">
                 {output.map((line) => (
                     <div key={line.id} className="flex flex-col items-start gap-1 animate-in fade-in-0 duration-300">
                         <div className="flex items-center gap-2 w-full">
