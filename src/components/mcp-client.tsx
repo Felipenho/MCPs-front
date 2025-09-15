@@ -32,7 +32,7 @@ import {
   Trash2,
   Sparkles,
   LoaderCircle,
-  Cube,
+  Box,
   Power,
   PowerOff,
   Terminal,
@@ -76,13 +76,13 @@ export function McpClient() {
     } catch (error) {
       console.error("Failed to load data from localStorage", error);
       toast({
-        title: "Erro",
-        description: "Falha ao carregar dados salvos.",
+        title: "Error",
+        description: "Failed to load saved data.",
         variant: "destructive"
       });
     }
 
-    addOutputLine("system", "Bem-vindo ao Client Hub! Insira o endereço do servidor e conecte-se.");
+    addOutputLine("system", "Welcome to Client Hub! Enter a server address and connect.");
   }, [toast]);
 
   useEffect(() => {
@@ -118,36 +118,36 @@ export function McpClient() {
 
   const handleConnect = () => {
     if (!serverAddress) {
-      toast({ title: "Endereço do servidor inválido", description: "Por favor, insira um endereço de servidor.", variant: "destructive" });
+      toast({ title: "Invalid server address", description: "Please enter a server address.", variant: "destructive" });
       return;
     }
     setIsConnecting(true);
-    addOutputLine("system", `Conectando a ${serverAddress}...`);
+    addOutputLine("system", `Connecting to ${serverAddress}...`);
     setTimeout(() => {
       setIsConnecting(false);
       setIsConnected(true);
       addOutputLine(
         "system",
-        `Conectado com sucesso a ${serverAddress}. Digite 'help' para ver os comandos.`
+        `Successfully connected to ${serverAddress}. Type 'help' for commands.`
       );
     }, 1500);
   };
 
   const handleDisconnect = () => {
     setIsConnected(false);
-    addOutputLine("system", "Desconectado do servidor.");
+    addOutputLine("system", "Disconnected from server.");
   };
   
   const mockServerResponse = (sentCommand: string) => {
     const responses: { [key: string]: string } = {
-        help: "Comandos disponíveis: help, status, players, kick <player>",
-        status: `Status do Servidor: Online\nVersão: 1.20.1\nJogadores: ${Math.floor(Math.random() * 10)}/20`,
-        players: "Jogadores online: player1, player2, another_user",
+        help: "Available commands: help, status, players, kick <player>",
+        status: `Server Status: Online\nVersion: 1.20.1\nPlayers: ${Math.floor(Math.random() * 10)}/20`,
+        players: "Online players: player1, player2, another_user",
     };
     if (sentCommand.startsWith("kick")) {
-        return `Jogador ${sentCommand.split(" ")[1]} foi kickado.`;
+        return `Player ${sentCommand.split(" ")[1]} has been kicked.`;
     }
-    return responses[sentCommand.toLowerCase()] || `Comando desconhecido: "${sentCommand}"`;
+    return responses[sentCommand.toLowerCase()] || `Unknown command: "${sentCommand}"`;
   }
 
   const handleSendCommand = () => {
@@ -193,7 +193,7 @@ export function McpClient() {
 
   const handleAddPreset = () => {
     if (!newPresetName.trim() || !newPresetCommand.trim()) {
-      toast({ title: "Preset inválido", description: "Nome e comando do preset não podem estar vazios.", variant: "destructive" });
+      toast({ title: "Invalid Preset", description: "Preset name and command cannot be empty.", variant: "destructive" });
       return;
     }
     const newPreset: Preset = {
@@ -205,12 +205,12 @@ export function McpClient() {
     setNewPresetName("");
     setNewPresetCommand("");
     setIsPresetDialogOpen(false);
-    toast({ title: "Preset salvo!", description: `O preset '${newPreset.name}' foi adicionado.`});
+    toast({ title: "Preset Saved!", description: `Preset '${newPreset.name}' has been added.`});
   };
 
   const handleDeletePreset = (id: string) => {
     setPresets(presets.filter((p) => p.id !== id));
-    toast({ title: "Preset removido.", variant: "default"});
+    toast({ title: "Preset removed.", variant: "default"});
   };
   
   const handleFormatOutput = async (id: number) => {
@@ -224,7 +224,7 @@ export function McpClient() {
         setOutput(prev => prev.map(o => o.id === id ? {...o, isFormatting: false, formattedText: result.formattedOutput, showFormatted: true } : o));
     } catch (error) {
         console.error("AI formatting failed", error);
-        toast({ title: "Falha na formatação", description: "A formatação com IA não pôde ser concluída.", variant: "destructive" });
+        toast({ title: "Formatting Failed", description: "AI formatting could not be completed.", variant: "destructive" });
         setOutput(prev => prev.map(o => o.id === id ? {...o, isFormatting: false} : o));
     }
   }
@@ -235,72 +235,74 @@ export function McpClient() {
 
 
   if (!isMounted) {
-    return null;
+    return <div className="flex h-screen w-screen items-center justify-center bg-background">
+      <LoaderCircle className="h-16 w-16 animate-spin text-primary"/>
+    </div>;
   }
 
   return (
-    <div className="flex h-screen w-screen bg-background text-foreground font-body">
-      <aside className="w-[350px] border-r border-border flex flex-col p-4">
+    <div className="grid h-screen w-full grid-cols-[350px_1fr]">
+      <aside className="border-r border-border/40 bg-zinc-900/50 flex flex-col p-4">
         <div className="flex items-center gap-3 mb-4 p-2">
-            <Cube size={32} className="text-primary"/>
-            <h1 className="text-2xl font-bold font-headline">Client Hub</h1>
+            <Box size={32} className="text-primary"/>
+            <h1 className="text-2xl font-bold">Client Hub</h1>
         </div>
-        <Card className="flex-grow flex flex-col">
+        <Card className="flex-grow flex flex-col bg-transparent border-0 shadow-none">
             <Tabs defaultValue="presets" className="flex flex-col h-full">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="presets"><Star className="mr-2 h-4 w-4"/>Presets</TabsTrigger>
-                <TabsTrigger value="history"><History className="mr-2 h-4 w-4"/>Histórico</TabsTrigger>
+                <TabsTrigger value="history"><History className="mr-2 h-4 w-4"/>History</TabsTrigger>
             </TabsList>
-            <TabsContent value="presets" className="flex-grow flex flex-col h-0">
-                <div className="p-4 border-b">
+            <TabsContent value="presets" className="flex-grow flex flex-col h-0 mt-4">
+                <div className="px-1 pb-4">
                     <Dialog open={isPresetDialogOpen} onOpenChange={setIsPresetDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button className="w-full"><Plus className="mr-2 h-4 w-4"/>Adicionar Preset</Button>
+                        <Button className="w-full"><Plus className="mr-2 h-4 w-4"/>Add Preset</Button>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
-                        <DialogTitle>Novo Preset</DialogTitle>
+                        <DialogTitle>New Preset</DialogTitle>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="name" className="text-right">Nome</Label>
+                            <Label htmlFor="name" className="text-right">Name</Label>
                             <Input id="name" value={newPresetName} onChange={(e) => setNewPresetName(e.target.value)} className="col-span-3"/>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="command" className="text-right">Comando</Label>
+                            <Label htmlFor="command" className="text-right">Command</Label>
                             <Input id="command" value={newPresetCommand} onChange={(e) => setNewPresetCommand(e.target.value)} className="col-span-3"/>
                         </div>
                         </div>
                         <DialogFooter>
-                            <Button onClick={handleAddPreset}>Salvar</Button>
+                            <Button onClick={handleAddPreset}>Save</Button>
                         </DialogFooter>
                     </DialogContent>
                     </Dialog>
                 </div>
                 <ScrollArea className="flex-grow">
-                    <div className="p-4 space-y-2">
-                        {presets.length === 0 && <p className="text-sm text-muted-foreground text-center p-4">Nenhum preset salvo.</p>}
+                    <div className="px-1 space-y-2">
+                        {presets.length === 0 && <p className="text-sm text-muted-foreground text-center p-4">No saved presets.</p>}
                         {presets.map((preset) => (
-                            <div key={preset.id} className="flex items-center gap-2 p-2 rounded-md bg-muted/20 hover:bg-muted/50 transition-colors">
+                            <div key={preset.id} className="flex items-center gap-2 p-2 rounded-md bg-zinc-800/50 hover:bg-zinc-800 transition-colors">
                                 <BookUser className="h-4 w-4 text-primary"/>
                                 <span className="flex-grow font-mono text-sm">{preset.name}</span>
                                 <Button size="icon" variant="ghost" onClick={() => { setCommand(preset.command); }}>
                                     <Send className="h-4 w-4"/>
                                 </Button>
                                 <Button size="icon" variant="ghost" onClick={() => handleDeletePreset(preset.id)}>
-                                    <Trash2 className="h-4 w-4 text-destructive/80"/>
+                                    <Trash2 className="h-4 w-4 text-red-400/80"/>
                                 </Button>
                             </div>
                         ))}
                     </div>
                 </ScrollArea>
             </TabsContent>
-            <TabsContent value="history" className="flex-grow h-0">
+            <TabsContent value="history" className="flex-grow h-0 mt-4">
                 <ScrollArea className="h-full">
-                    <div className="p-4 space-y-1">
-                        {history.length === 0 && <p className="text-sm text-muted-foreground text-center p-4">Nenhum comando no histórico.</p>}
+                    <div className="px-1 space-y-1">
+                        {history.length === 0 && <p className="text-sm text-muted-foreground text-center p-4">No commands in history.</p>}
                         {history.map((histCmd, i) => (
-                            <button key={i} onClick={() => setCommand(histCmd)} className="w-full text-left p-2 rounded-md hover:bg-muted/50 transition-colors">
+                            <button key={i} onClick={() => setCommand(histCmd)} className="w-full text-left p-2 rounded-md hover:bg-zinc-800 transition-colors">
                                 <p className="font-mono text-sm truncate text-muted-foreground">{histCmd}</p>
                             </button>
                         ))}
@@ -312,34 +314,34 @@ export function McpClient() {
       </aside>
 
       <main className="flex-grow flex flex-col p-4 gap-4">
-        <Card>
+        <Card className="bg-transparent">
             <CardContent className="p-4 flex items-center gap-4">
                 <Server className="text-primary"/>
                 <Input
-                    placeholder="Endereço do Servidor"
+                    placeholder="Server Address"
                     value={serverAddress}
                     onChange={(e) => setServerAddress(e.target.value)}
                     disabled={isConnected || isConnecting}
                     className="flex-grow"
                 />
                 {isConnected ? (
-                    <Button variant="destructive" onClick={handleDisconnect}><PowerOff className="mr-2 h-4 w-4"/>Desconectar</Button>
+                    <Button variant="destructive" onClick={handleDisconnect}><PowerOff className="mr-2 h-4 w-4"/>Disconnect</Button>
                 ) : (
                     <Button onClick={handleConnect} disabled={isConnecting}>
                         {isConnecting ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin"/> : <Power className="mr-2 h-4 w-4"/>}
-                        {isConnecting ? "Conectando..." : "Conectar"}
+                        {isConnecting ? "Connecting..." : "Connect"}
                     </Button>
                 )}
                 <div className="flex items-center gap-2">
                     <div className={cn("h-3 w-3 rounded-full", isConnected ? "bg-green-500" : "bg-red-500")}/>
-                    <span className="text-sm font-medium">{isConnected ? "Conectado" : "Desconectado"}</span>
+                    <span className="text-sm font-medium">{isConnected ? "Connected" : "Disconnected"}</span>
                 </div>
             </CardContent>
         </Card>
 
-        <Card className="flex-grow flex flex-col">
+        <Card className="flex-grow flex flex-col bg-transparent">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Terminal/> Saída do Servidor</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Terminal/> Server Output</CardTitle>
           </CardHeader>
           <Separator />
             <ScrollArea className="flex-grow p-4" viewportRef={outputRef}>
@@ -349,7 +351,7 @@ export function McpClient() {
                         <div className="flex items-center gap-2 w-full">
                             <ChevronRight size={16} className={cn(
                                 "transform transition-transform",
-                                line.type === "out" && "text-accent -rotate-90",
+                                line.type === "out" && "text-primary -rotate-90",
                                 line.type === "in" && "text-green-400 rotate-90",
                                 line.type === "system" && "text-blue-400"
                             )} />
@@ -364,11 +366,11 @@ export function McpClient() {
                                 <>
                                 {line.formattedText && 
                                     <Button size="sm" variant="outline" onClick={() => toggleFormattedOutput(line.id)}>
-                                        {line.showFormatted ? "Ver Original" : "Ver Formatado"}
+                                        {line.showFormatted ? "Show Original" : "Show Formatted"}
                                     </Button>
                                 }
                                 <Button size="icon" variant="ghost" onClick={() => handleFormatOutput(line.id)} disabled={line.isFormatting}>
-                                    {line.isFormatting ? <LoaderCircle className="h-4 w-4 animate-spin"/> : <Sparkles className="h-4 w-4 text-accent"/>}
+                                    {line.isFormatting ? <LoaderCircle className="h-4 w-4 animate-spin"/> : <Sparkles className="h-4 w-4 text-primary"/>}
                                 </Button>
                                 </>
                             )}
@@ -379,11 +381,11 @@ export function McpClient() {
             </ScrollArea>
         </Card>
 
-        <Card>
+        <Card className="bg-transparent">
             <CardContent className="p-2">
                 <div className="relative">
                     <Input
-                        placeholder="Digite um comando..."
+                        placeholder="Type a command..."
                         value={command}
                         onChange={(e) => setCommand(e.target.value)}
                         onKeyDown={handleCommandKeyDown}
