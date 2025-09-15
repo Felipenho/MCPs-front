@@ -114,22 +114,30 @@ export function McpClient() {
     ]);
   };
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     if (!serverAddress) {
       toast({ title: "Invalid server address", description: "Please enter a server address.", variant: "destructive" });
       return;
     }
     setIsConnecting(true);
     addOutputLine("system", `Connecting to ${serverAddress}...`);
-    // In a real app, you'd likely ping the server here.
-    setTimeout(() => {
-      setIsConnecting(false);
+    
+    try {
+      const response = await fetch(`http://${serverAddress}`);
+      if (!response.ok) {
+        throw new Error(`Connection failed: ${response.statusText} (${response.status})`);
+      }
+      const data = await response.json();
       setIsConnected(true);
-      addOutputLine(
-        "system",
-        `Connection established to ${serverAddress}. Try 'sum 2 3'`
-      );
-    }, 1000);
+      const welcomeMessage = data.message || "Connection established.";
+      addOutputLine("in", welcomeMessage);
+      addOutputLine("system", `Try 'sum 2 3'`);
+    } catch (error: any) {
+      addOutputLine("system", `Error: ${error.message || 'Could not connect to server.'}`);
+      setIsConnected(false);
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   const handleDisconnect = () => {
