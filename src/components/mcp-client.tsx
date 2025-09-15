@@ -80,7 +80,7 @@ export function McpClient() {
       });
     }
 
-    addOutputLine("system", "Welcome to Client Hub! Enter a server address and connect.");
+    addOutputLine("system", "Welcome to MCP Client Hub! Enter a server address and connect.");
   }, [toast]);
 
   useEffect(() => {
@@ -238,7 +238,7 @@ export function McpClient() {
       <aside className="border-r border-border/40 bg-zinc-900/50 flex flex-col p-4">
         <div className="flex items-center gap-3 mb-4 p-2">
             <Box size={32} className="text-primary"/>
-            <h1 className="text-2xl font-bold">Client Hub</h1>
+            <h1 className="text-2xl font-bold">MCP Client Hub</h1>
         </div>
         <Card className="flex-grow flex flex-col bg-transparent border-0 shadow-none">
             <Tabs defaultValue="presets" className="flex flex-col h-full">
@@ -384,5 +384,3 @@ export function McpClient() {
     </div>
   );
 }
-
-    

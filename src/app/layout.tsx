@@ -10,7 +10,7 @@ const fontSans = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Client Hub',
+  title: 'MCP Client Hub',
   description: 'An MCP Client Interface',
 };
 
