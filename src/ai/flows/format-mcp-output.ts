@@ -32,7 +32,7 @@ const formatMcpOutputPrompt = ai.definePrompt({
   name: 'formatMcpOutputPrompt',
   input: {schema: FormatMcpOutputInputSchema},
   output: {schema: FormatMcpOutputOutputSchema},
-  prompt: `You are an expert at formatting output from an MCP (Minecraft Protocol) server to improve readability and comprehension for users.
+  prompt: `You are an expert at formatting output from an MCP (Model Context Protocol) server to improve readability and comprehension for users.
 
       Take the raw MCP server output provided below and format it to be more easily understood, using markdown formatting, natural language explanations, and any other techniques to improve clarity.
 
