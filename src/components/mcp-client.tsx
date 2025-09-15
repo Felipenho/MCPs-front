@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useTransition } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Preset, OutputLine } from "@/lib/types";
-import { formatMcpOutput } from "@/ai/flows/format-mcp-output";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -112,7 +111,7 @@ export function McpClient() {
   const addOutputLine = (type: OutputLine["type"], text: string) => {
     setOutput((prev) => [
       ...prev,
-      { id: prev.length, type, text, isFormatting: false, showFormatted: false },
+      { id: prev.length, type, text },
     ]);
   };
 
@@ -212,27 +211,6 @@ export function McpClient() {
     setPresets(presets.filter((p) => p.id !== id));
     toast({ title: "Preset removed.", variant: "default"});
   };
-  
-  const handleFormatOutput = async (id: number) => {
-    const targetOutput = output.find(o => o.id === id);
-    if (!targetOutput) return;
-
-    setOutput(prev => prev.map(o => o.id === id ? {...o, isFormatting: true} : o));
-
-    try {
-        const result = await formatMcpOutput({ mcpOutput: targetOutput.text });
-        setOutput(prev => prev.map(o => o.id === id ? {...o, isFormatting: false, formattedText: result.formattedOutput, showFormatted: true } : o));
-    } catch (error) {
-        console.error("AI formatting failed", error);
-        toast({ title: "Formatting Failed", description: "AI formatting could not be completed.", variant: "destructive" });
-        setOutput(prev => prev.map(o => o.id === id ? {...o, isFormatting: false} : o));
-    }
-  }
-
-  const toggleFormattedOutput = (id: number) => {
-    setOutput(prev => prev.map(o => o.id === id ? {...o, showFormatted: !o.showFormatted} : o));
-  };
-
 
   if (!isMounted) {
     return <div className="flex h-screen w-screen items-center justify-center bg-background">
@@ -356,24 +334,8 @@ export function McpClient() {
                                 line.type === "system" && "text-blue-400"
                             )} />
                             <div className="flex-grow">
-                                {line.showFormatted && line.formattedText ? (
-                                    <div className="prose prose-sm prose-invert" dangerouslySetInnerHTML={{ __html: line.formattedText.replace(/\n/g, '<br />') }} />
-                                ) : (
-                                    <pre className="whitespace-pre-wrap break-words">{line.text}</pre>
-                                )}
+                                <pre className="whitespace-pre-wrap break-words">{line.text}</pre>
                             </div>
-                            {line.type === "in" && (
-                                <>
-                                {line.formattedText && 
-                                    <Button size="sm" variant="outline" onClick={() => toggleFormattedOutput(line.id)}>
-                                        {line.showFormatted ? "Show Original" : "Show Formatted"}
-                                    </Button>
-                                }
-                                <Button size="icon" variant="ghost" onClick={() => handleFormatOutput(line.id)} disabled={line.isFormatting}>
-                                    {line.isFormatting ? <LoaderCircle className="h-4 w-4 animate-spin"/> : <Sparkles className="h-4 w-4 text-primary"/>}
-                                </Button>
-                                </>
-                            )}
                         </div>
                     </div>
                 ))}
@@ -407,3 +369,5 @@ export function McpClient() {
     </div>
   );
 }
+
+    
