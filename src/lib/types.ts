@@ -8,6 +8,5 @@ export type OutputLine = {
   id: number;
   type: 'in' | 'out' | 'system';
   text: string;
+  timestamp: Date;
 };
-
-    

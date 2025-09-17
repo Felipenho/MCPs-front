@@ -121,18 +121,31 @@ export function McpClient() {
     }
     setIsConnecting(true);
     addOutputLine("system", `Connecting to ${serverAddress}...`);
-    
-    // Simulate a slight delay for user feedback
-    await new Promise(resolve => setTimeout(resolve, 500));
 
-    // For now, we'll assume connection is successful if the address is provided.
-    // A real implementation would involve a WebSocket connection or a ping to the server.
-    setIsConnected(true);
-    addOutputLine("system", `Connection established to ${serverAddress}.`);
-    addOutputLine("system", `Try 'sum 2 3'`);
-
-
-    setIsConnecting(false);
+    try {
+      // Use a GET request to a root or health check endpoint.
+      // FastMCP might not have a root endpoint, so this might need adjustment
+      // to a known endpoint like the base `/mcp` path.
+      const response = await fetch(`http://${serverAddress}`);
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+      
+      setIsConnected(true);
+      addOutputLine("system", `Connection established to ${serverAddress}.`);
+      addOutputLine("system", `MCP Server is responsive. Try 'sum 2 3'`);
+    } catch (error: any) {
+      setIsConnected(false);
+      addOutputLine("system", `Failed to connect: ${error.message}`);
+      toast({
+        title: "Connection Failed",
+        description: "Could not establish a connection to the server.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   const handleDisconnect = () => {
@@ -159,6 +172,7 @@ export function McpClient() {
       const [a, b] = args.map(Number);
       if (!isNaN(a) && !isNaN(b)) {
         try {
+          addOutputLine("system", `Calling tool 'sum_numbers' with a=${a}, b=${b}...`);
           const response = await fetch(`http://${serverAddress}/sum_numbers`, {
             method: 'POST',
             headers: {
@@ -172,10 +186,10 @@ export function McpClient() {
           }
           
           const result = await response.json();
-          addOutputLine("in", `Result: ${result.result}`);
+          addOutputLine("in", `Result: ${JSON.stringify(result)}`);
 
         } catch (error: any) {
-          addOutputLine("system", `Error: ${error.message}`);
+          addOutputLine("system", `Error calling tool: ${error.message}`);
         }
       } else {
         addOutputLine("system", "Error: 'sum' command requires two number arguments.");
