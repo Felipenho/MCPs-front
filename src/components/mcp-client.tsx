@@ -123,10 +123,7 @@ export function McpClient() {
     addOutputLine("system", `Connecting to ${serverAddress}...`);
 
     try {
-      // Use a GET request to a root or health check endpoint.
-      // FastMCP might not have a root endpoint, so this might need adjustment
-      // to a known endpoint like the base `/mcp` path.
-      const response = await fetch(`http://${serverAddress}`);
+      const response = await fetch(`/api/mcp/`);
       
       if (!response.ok) {
         throw new Error(`Server responded with status: ${response.status}`);
@@ -173,7 +170,7 @@ export function McpClient() {
       if (!isNaN(a) && !isNaN(b)) {
         try {
           addOutputLine("system", `Calling tool 'sum_numbers' with a=${a}, b=${b}...`);
-          const response = await fetch(`http://${serverAddress}/sum_numbers`, {
+          const response = await fetch(`/api/mcp/sum_numbers`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
